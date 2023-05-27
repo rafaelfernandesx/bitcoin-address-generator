@@ -1,0 +1,6 @@
+{
+    "require": {
+        "simplito/elliptic-php": "^1.0",
+        "stephenhill/base58": "^1.1"
+    }
+}
