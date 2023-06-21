@@ -39,6 +39,12 @@ class BitcoinAddress
 		return $obj;
 	}
 
+	public function fromSeedL($seed)
+	{
+		$random_bytes = hash('sha256', $seed);
+		$this->keyPair = $this->ec->keyFromPrivate($random_bytes);
+	}
+
 	public function getAddress(string $version = MAINNET_VERSION)
 	{
 		if ($this->keyPair === null) {
@@ -64,17 +70,28 @@ class BitcoinAddress
 		return $this->keyPair->getPrivate('hex');
 	}
 
+	public function getPrivateKeyWif()
+	{
+		$prefixedPrivateKey = '80' . $this->keyPair->getPrivate('hex');
+		$firstPassSha256 = strtoupper(hash('sha256', hex2bin($prefixedPrivateKey)));
+		$secondPassSha256 = strtoupper(hash('sha256', hex2bin($firstPassSha256)));
+		$checksumString = substr($secondPassSha256, 0, 8);
+		$checksummedPrivateKey = $prefixedPrivateKey . $checksumString;
+
+		return $this->base58->encode(hex2bin($checksummedPrivateKey));
+	}
+
 	public function getPublicKeyHex()
 	{
 		return $this->keyPair->getPublic(false, 'hex');
 	}
-
 }
 
 
 $bitCoinAddress = new BitcoinAddress();
 
-
+$bitCoinAddress->fromSeedL('abc');
+echo $bitCoinAddress->getPrivateKeyWif() . PHP_EOL;
 echo $bitCoinAddress->getPrivateKeyHex() . PHP_EOL;
 echo $bitCoinAddress->getPublicKeyHex() . PHP_EOL;
-echo $bitCoinAddress->getAddress('6f') . PHP_EOL;
+echo $bitCoinAddress->getAddress('00') . PHP_EOL;
