@@ -45,6 +45,11 @@ class BitcoinAddress
 		$this->keyPair = $this->ec->keyFromPrivate($random_bytes);
 	}
 
+	public function fromPrivateKeyHexL($privateKeyHex)
+	{
+		$this->keyPair = $this->ec->keyFromPrivate($privateKeyHex);
+	}
+
 	public function getAddress(string $version = MAINNET_VERSION)
 	{
 		if ($this->keyPair === null) {
@@ -90,7 +95,7 @@ class BitcoinAddress
 
 $bitCoinAddress = new BitcoinAddress();
 
-$bitCoinAddress->fromSeedL('abc');
+$bitCoinAddress->fromPrivateKeyHexL('0000000000000000000000000000000000000000000000000000000000000001');
 echo $bitCoinAddress->getPrivateKeyWif() . PHP_EOL;
 echo $bitCoinAddress->getPrivateKeyHex() . PHP_EOL;
 echo $bitCoinAddress->getPublicKeyHex() . PHP_EOL;
