@@ -50,12 +50,12 @@ class BitcoinAddress
 		$this->keyPair = $this->ec->keyFromPrivate($privateKeyHex);
 	}
 
-	public function getAddress(string $version = MAINNET_VERSION)
+	public function getAddress(string $version = MAINNET_VERSION, bool $compressed = false)
 	{
 		if ($this->keyPair === null) {
 			throw new Exception('keyPair is null');
 		}
-		$publicKey = hex2bin($this->getPublicKeyHex());
+		$publicKey = hex2bin($compressed ? $this->getPublicKeyHexC() : $this->getPublicKeyHex());
 		$publicKeySHA256 = hash('sha256', $publicKey);
 
 		$hash160 = hash('ripemd160', hex2bin($publicKeySHA256));
@@ -90,6 +90,11 @@ class BitcoinAddress
 	{
 		return $this->keyPair->getPublic(false, 'hex');
 	}
+
+	public function getPublicKeyHexC()
+	{
+		return $this->keyPair->getPublic(true, 'hex');
+	}
 }
 
 
@@ -100,3 +105,4 @@ echo $bitCoinAddress->getPrivateKeyWif() . PHP_EOL;
 echo $bitCoinAddress->getPrivateKeyHex() . PHP_EOL;
 echo $bitCoinAddress->getPublicKeyHex() . PHP_EOL;
 echo $bitCoinAddress->getAddress('00') . PHP_EOL;
+echo $bitCoinAddress->getAddress('00', true) . PHP_EOL;
