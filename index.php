@@ -69,6 +69,22 @@ class BitcoinAddress
 		$publicAddress = $this->base58->encode(hex2bin($publicAddress));
 		return $publicAddress;
 	}
+	public function getAddressFromPublicKeyHex(string $hex, string $version = MAINNET_VERSION)
+	{
+		$publicKey = hex2bin($hex);
+		$publicKeySHA256 = hash('sha256', $publicKey);
+
+		$hash160 = hash('ripemd160', hex2bin($publicKeySHA256));
+		$hashEBytes = $version . $hash160;
+
+		$firstSHA = hash('sha256', hex2bin($hashEBytes));
+		$secondSHA = hash('sha256', hex2bin($firstSHA));
+
+		$checkSum = substr($secondSHA, 0, 8);
+		$publicAddress = $version . $hash160 . $checkSum;
+		$publicAddress = $this->base58->encode(hex2bin($publicAddress));
+		return $publicAddress;
+	}
 
 	public function getPrivateKeyHex()
 	{
@@ -101,7 +117,7 @@ class BitcoinAddress
 $bitCoinAddress = new BitcoinAddress();
 
 $bitCoinAddress->fromPrivateKeyHexL('0000000000000000000000000000000000000000000000000000000000000001');
-echo $bitCoinAddress->getPrivateKeyWif() . PHP_EOL;
+echo $bitCoinAddress->getAddressFromPublicKeyHex('0000000000000000000000000000000000000000000000000000000000000001') . PHP_EOL;
 echo $bitCoinAddress->getPrivateKeyHex() . PHP_EOL;
 echo $bitCoinAddress->getPublicKeyHex() . PHP_EOL;
 echo $bitCoinAddress->getAddress('00') . PHP_EOL;
