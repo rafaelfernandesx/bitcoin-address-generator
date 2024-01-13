@@ -27,7 +27,7 @@ class BitcoinAddress
 	static public function fromPrivateKeyHex($privateKeyHex)
 	{
 		$obj = new BitcoinAddress();
-		$obj->keyPair = self::$ec->keyFromPrivate($privateKeyHex);
+		$obj->keyPair = $obj->ec->keyFromPrivate($privateKeyHex);
 		return $obj;
 	}
 
@@ -35,7 +35,7 @@ class BitcoinAddress
 	{
 		$seed256Hex = hash('sha256', strtoupper(bin2hex($seed)));
 		$obj = new BitcoinAddress();
-		$obj->keyPair = self::$ec->keyFromPrivate($seed256Hex);
+		$obj->keyPair = $obj->ec->keyFromPrivate($seed256Hex);
 		return $obj;
 	}
 
@@ -69,12 +69,12 @@ class BitcoinAddress
 		$publicAddress = $this->base58->encode(hex2bin($publicAddress));
 		return $publicAddress;
 	}
-	public function getAddressFromPublicKeyHex(string $hex, string $version = MAINNET_VERSION)
+	public function getAddressFromPublicHex(string $hex, string $version = MAINNET_VERSION)
 	{
 		$publicKey = hex2bin($hex);
 		$publicKeySHA256 = hash('sha256', $publicKey);
 
-		$hash160 = hash('ripemd160', hex2bin($publicKeySHA256));
+		$hash160 = '0000000000000000000000000000000000000000'; //hash('ripemd160', hex2bin($publicKeySHA256));
 		$hashEBytes = $version . $hash160;
 
 		$firstSHA = hash('sha256', hex2bin($hashEBytes));
@@ -114,11 +114,11 @@ class BitcoinAddress
 }
 
 
-$bitCoinAddress = new BitcoinAddress();
+$bitCoinAddress = BitcoinAddress::fromPrivateKeyHex('f94a840f1e1a901843a75dd07ffcc5c84478dc4f987797474c9393ac53ab55e6');
 
-$bitCoinAddress->fromPrivateKeyHexL('0000000000000000000000000000000000000000000000000000000000000001');
-echo $bitCoinAddress->getAddressFromPublicKeyHex('0000000000000000000000000000000000000000000000000000000000000001') . PHP_EOL;
+// echo $bitCoinAddress->getAddressFromPublicHex('').PHP_EOL;
+// echo $bitCoinAddress->getAddress().PHP_EOL;
 echo $bitCoinAddress->getPrivateKeyHex() . PHP_EOL;
+// echo $bitCoinAddress->getPrivateKeyWif().PHP_EOL;
 echo $bitCoinAddress->getPublicKeyHex() . PHP_EOL;
-echo $bitCoinAddress->getAddress('00') . PHP_EOL;
-echo $bitCoinAddress->getAddress('00', true) . PHP_EOL;
+echo $bitCoinAddress->getPublicKeyHexC() . PHP_EOL;
