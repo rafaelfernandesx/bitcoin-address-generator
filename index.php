@@ -482,10 +482,6 @@ class BitcoinECDSA
 
 	/***
 	 * Calculates the square root of $a mod p and returns the 2 solutions as an array.
-	 *
-	 * @param resource $a (GMP)
-	 * @return array|null
-	 * @throws \Exception
 	 */
 	private function sqrt($a): array|null
 	{
@@ -746,7 +742,7 @@ class BitcoinECDSA
 			return false;
 	}
 
-	public function getWif(bool $compressed = true): string
+	public function getWif(bool $compressed = false): string
 	{
 		if (!isset($this->k)) {
 			throw new \Exception('No Private Key was defined');
@@ -794,13 +790,11 @@ class BitcoinECDSA
 
 
 
-$inicio = microtime(true);
-$btc = new BitcoinECDSA();
-for ($i = 0; $i < 1000; $i++) {
-	$btc->setPrivateKeyFromSeed("$i");
-	$btc->getAddress();
-}
-$fim = microtime(true);
-$tempoDecorrido = $fim - $inicio;
 
-echo "Tempo de execução: " . number_format($tempoDecorrido, 6) . " segundos\n";
+$btc = new BitcoinECDSA();
+$btc->setPrivateKeyHex('00');
+echo 'address: ' . $btc->getAddress() . PHP_EOL;
+echo 'addressC: ' . $btc->getAddress(true) . PHP_EOL;
+echo 'private key: ' . $btc->getPrivateKey() . PHP_EOL;
+echo 'public key: ' . $btc->getPubKey() . PHP_EOL;
+echo 'wif: ' . $btc->getWif() . PHP_EOL;
