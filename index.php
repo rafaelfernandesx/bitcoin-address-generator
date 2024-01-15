@@ -764,6 +764,16 @@ class BitcoinECDSA
 		return Base58::encode($secretKey);
 	}
 
+	public function getBalance(string $address=null) {
+		$addr = $address?? $this->getAddress();
+		try {
+			$balance = file_get_contents('https://blockchain.info/q/addressbalance/'.$addr);
+			return $balance;
+		} catch (\Throwable $th) {
+			return 'Error';
+		}
+	}
+
 	public function validateWifKey(string $wif): bool
 	{
 		$key = Base58::decode($wif, true);
@@ -791,10 +801,30 @@ class BitcoinECDSA
 
 
 
-$btc = new BitcoinECDSA();
-$btc->setPrivateKeyHex('00');
-echo 'address: ' . $btc->getAddress() . PHP_EOL;
-echo 'addressC: ' . $btc->getAddress(true) . PHP_EOL;
-echo 'private key: ' . $btc->getPrivateKey() . PHP_EOL;
-echo 'public key: ' . $btc->getPubKey() . PHP_EOL;
-echo 'wif: ' . $btc->getWif() . PHP_EOL;
+$btc = new BitcoinECDSA();/*
+for ($j=100; $j < 1000; $j++) { 
+	$arrAddress = [];
+	$startAt =intval($j.'00');
+	$endAt=intval(($j+1).'00');
+	for ($i=$startAt ; $i < $endAt; $i++) {
+		$btc->setPrivateKeyHex($i);
+		$arrAddress[]=$btc->getAddress();
+		// echo 'address: ' . $btc->getAddress() . PHP_EOL;
+		// echo 'balance: ' . $btc->getBalance() . PHP_EOL;
+	}
+	$result= file_get_contents('https://blockchain.info/balance?cors=true&active='.join(',',$arrAddress));
+	$rArr = json_decode($result);
+	foreach ($rArr as $key => $value) {
+		if($value->final_balance != 0){
+			echo $key .'-'.$value->final_balance.'-'.$btc->getWif();
+			echo $key .'-'.$value->final_balance;
+			file_put_contents($j.'file.json', json_encode($arrAddress));
+		}
+	}
+	sleep(1);
+}
+	// echo 'addressC: ' . $btc->getAddress(true) . PHP_EOL;
+// echo 'private key: ' . $btc->getPrivateKey() . PHP_EOL;
+// echo 'public key: ' . $btc->getPubKey() . PHP_EOL;
+// echo 'wif: ' . $btc->getWif() . PHP_EOL;
+*/
