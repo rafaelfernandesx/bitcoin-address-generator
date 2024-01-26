@@ -202,27 +202,6 @@ class BitcoinECDSA
 	}
 
 	/***
-	 * Convert a number to a compact Int
-	 * taken from https://github.com/scintill/php-bitcoin-signature-routines/blob/master/verifymessage.php
-	 *
-	 * @param int $i
-	 * @return string (bin)
-	 * @throws \Exception
-	 */
-	private function numToVarIntString($i)
-	{
-		if ($i < 0xfd) {
-			return chr($i);
-		} else if ($i <= 0xffff) {
-			return pack('Cv', 0xfd, $i);
-		} else if ($i <= 0xffffffff) {
-			return pack('CV', 0xfe, $i);
-		} else {
-			throw new \Exception('int too large');
-		}
-	}
-
-	/***
 	 * Set the network prefix, '00' = main network, '6f' = test network.
 	 *
 	 * @param string $prefix (hexa)
@@ -480,96 +459,6 @@ class BitcoinECDSA
 		return $lastPoint;
 	}
 
-	/***
-	 * Calculates the square root of $a mod p and returns the 2 solutions as an array.
-	 */
-	private function sqrt($a): array|null
-	{
-		$p = $this->p;
-
-		if (gmp_legendre($a, $p) !== 1) {
-			//no result
-			return null;
-		}
-
-		if (gmp_strval(gmp_mod($p, gmp_init(4, 10)), 10) === '3') {
-			$sqrt1 = gmp_powm(
-				$a,
-				gmp_div_q(
-					gmp_add($p, gmp_init(1, 10)),
-					gmp_init(4, 10)
-				),
-				$p
-			);
-			// there are always 2 results for a square root
-			// In an infinite number field you have -2^2 = 2^2 = 4
-			// In a finite number field you have a^2 = (p-a)^2
-			$sqrt2 = gmp_mod(gmp_sub($p, $sqrt1), $p);
-			return [$sqrt1, $sqrt2];
-		} else {
-			throw new \Exception('P % 4 != 3 , this isn\'t supported yet.');
-		}
-	}
-
-
-	private function calculateYWithX(string $x, $derEvenOrOddCode = null): array|null|string
-	{
-		$a = $this->a;
-		$b = $this->b;
-		$p = $this->p;
-
-		$x = gmp_init($x, 16);
-		$y2 = gmp_mod(
-			gmp_add(
-				gmp_add(
-					gmp_powm($x, gmp_init(3, 10), $p),
-					gmp_mul($a, $x)
-				),
-				$b
-			),
-			$p
-		);
-
-		$y = $this->sqrt($y2);
-
-		if ($y === null) //if there is no result
-		{
-			return null;
-		}
-
-		if ($derEvenOrOddCode === null) {
-			return $y;
-		} else if ($derEvenOrOddCode === '02') // even
-		{
-			$resY = null;
-			if (gmp_strval(gmp_mod($y[0], gmp_init(2, 10)), 10) === '0')
-				$resY = gmp_strval($y[0], 16);
-			if (gmp_strval(gmp_mod($y[1], gmp_init(2, 10)), 10) === '0')
-				$resY = gmp_strval($y[1], 16);
-			if ($resY !== null) {
-				while (strlen($resY) < 64) {
-					$resY = '0' . $resY;
-				}
-			}
-			return $resY;
-		} else if ($derEvenOrOddCode === '03') // odd
-		{
-			$resY = null;
-			if (gmp_strval(gmp_mod($y[0], gmp_init(2, 10)), 10) === '1')
-				$resY = gmp_strval($y[0], 16);
-			if (gmp_strval(gmp_mod($y[1], gmp_init(2, 10)), 10) === '1')
-				$resY = gmp_strval($y[1], 16);
-			if ($resY !== null) {
-				while (strlen($resY) < 64) {
-					$resY = '0' . $resY;
-				}
-			}
-			return $resY;
-		}
-
-		return null;
-	}
-
 	private function validatePoint(string $x, string $y): bool
 	{
 		$a = $this->a;
@@ -797,34 +686,3 @@ class BitcoinECDSA
 	}
 
 }
-
-
-
-
-$btc = new BitcoinECDSA();/*
-for ($j=100; $j < 1000; $j++) { 
-	$arrAddress = [];
-	$startAt =intval($j.'00');
-	$endAt=intval(($j+1).'00');
-	for ($i=$startAt ; $i < $endAt; $i++) {
-		$btc->setPrivateKeyHex($i);
-		$arrAddress[]=$btc->getAddress();
-		// echo 'address: ' . $btc->getAddress() . PHP_EOL;
-		// echo 'balance: ' . $btc->getBalance() . PHP_EOL;
-	}
-	$result= file_get_contents('https://blockchain.info/balance?cors=true&active='.join(',',$arrAddress));
-	$rArr = json_decode($result);
-	foreach ($rArr as $key => $value) {
-		if($value->final_balance != 0){
-			echo $key .'-'.$value->final_balance.'-'.$btc->getWif();
-			echo $key .'-'.$value->final_balance;
-			file_put_contents($j.'file.json', json_encode($arrAddress));
-		}
-	}
-	sleep(1);
-}
-	// echo 'addressC: ' . $btc->getAddress(true) . PHP_EOL;
-// echo 'private key: ' . $btc->getPrivateKey() . PHP_EOL;
-// echo 'public key: ' . $btc->getPubKey() . PHP_EOL;
-// echo 'wif: ' . $btc->getWif() . PHP_EOL;
-*/
