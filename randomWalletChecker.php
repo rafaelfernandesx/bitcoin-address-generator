@@ -1,7 +1,7 @@
 <?php
 
 require 'index.php';
-require 't2.php';
+require 'indexReader.php';
 
 function randomNumber()
 {
