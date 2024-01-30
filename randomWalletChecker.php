@@ -3,10 +3,10 @@
 require 'index.php';
 require 'indexReader.php';
 
-function randomNumber()
+function randomNumber(string $max = "1157920892373161954235709850086879078528375642790749043826051631415181614944")
 {
     // Defina o valor máximo como uma string
-    $maxValueString = "1157920892373161954235709850086879078528375642790749043826051631415181614944";
+    $maxValueString = $max;
 
     // Converta o valor máximo para GMP
     $maxValue = gmp_init($maxValueString);
@@ -25,24 +25,34 @@ $btc = new BitcoinECDSA();
 $reader = new IndexedReader('./address.txt');
 
 while (true) {
-    $arr = [];
-    echo $base = randomNumber();
-    echo PHP_EOL;
-    for ($i = 0; $i < 1000; $i++) {
-        $hex = gmp_strval(gmp_add($base, $i), 16);
-        $btc->setPrivateKeyHex($hex);
-        if ($reader->findValueByName($btc->getAddress())) {
-            $arr[$btc->getWif()] = $btc->getAddress();
+
+    $base = randomNumber();
+    $decValue = hexdec($base);
+    while ($decValue > 200) {
+        $arr = [];
+        echo $base . PHP_EOL;
+        for ($i = 0; $i < 10; $i++) {
+            $hex = gmp_strval(gmp_add($base, $i), 16);
+            $btc->setPrivateKeyHex($hex);
+            $address = $btc->getAddress();
+            if ($reader->findValueByName($address)) {
+                $arr[$btc->getWif()] = $address;
+            }
         }
-    }
-    for ($i = 1000; $i > 0; $i--) {
-        $hex = gmp_strval(gmp_sub($base, $i), 16);
-        $btc->setPrivateKeyHex($hex);
-        if ($reader->findValueByName($btc->getAddress())) {
-            $arr[$btc->getWif()] = $btc->getAddress();
+        for ($i = 10; $i > 0; $i--) {
+            $hex = gmp_strval(gmp_sub($base, $i), 16);
+            $btc->setPrivateKeyHex($hex);
+            $address = $btc->getAddress();
+            if ($reader->findValueByName($address)) {
+                $arr[$btc->getWif()] = $address;
+            }
         }
-    }
-    if (!empty($arr)) {
-        file_put_contents($base . '.json', json_encode($arr));
+        if (!empty($arr)) {
+            file_put_contents($base . '.json', json_encode($arr));
+        }
+
+        $base = randomNumber($base);
+        $decValue = hexdec($base);
     }
 }
+
