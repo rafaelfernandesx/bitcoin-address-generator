@@ -1,4 +1,5 @@
 <?php
+
 /**
  *
  * @author Jan Moritz Lindemann
@@ -6,7 +7,6 @@
 if (!extension_loaded('gmp')) {
 	throw new \Exception('GMP extension seems not to be installed');
 }
-
 
 class Base58
 {
@@ -96,66 +96,7 @@ class Base58
 	 */
 	static public function permutation($char, $reverse = false): string
 	{
-		$table = [
-			'1',
-			'2',
-			'3',
-			'4',
-			'5',
-			'6',
-			'7',
-			'8',
-			'9',
-			'A',
-			'B',
-			'C',
-			'D',
-			'E',
-			'F',
-			'G',
-			'H',
-			'J',
-			'K',
-			'L',
-			'M',
-			'N',
-			'P',
-			'Q',
-			'R',
-			'S',
-			'T',
-			'U',
-			'V',
-			'W',
-			'X',
-			'Y',
-			'Z',
-			'a',
-			'b',
-			'c',
-			'd',
-			'e',
-			'f',
-			'g',
-			'h',
-			'i',
-			'j',
-			'k',
-			'm',
-			'n',
-			'o',
-			'p',
-			'q',
-			'r',
-			's',
-			't',
-			'u',
-			'v',
-			'w',
-			'x',
-			'y',
-			'z'
-		];
+		$table = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
 
 		if ($reverse) {
 			$reversedTable = [];
@@ -175,16 +116,14 @@ class Base58
 			return null;
 	}
 }
-class BitcoinECDSA
+class ECDSA
 {
-
-	private $k;
+	public $k;
 	private $a;
 	private $b;
 	private $p;
-	private $n;
+	public $n;
 	private $G;
-	private string $networkPrefix;
 
 	public function __construct()
 	{
@@ -197,91 +136,7 @@ class BitcoinECDSA
 			'x' => gmp_init('55066263022277343669578718895168534326250603453777594175500187360389116729240'),
 			'y' => gmp_init('32670510020758816978083085130507043184471273380659243275938904335757337482424')
 		];
-
-		$this->networkPrefix = '00';
 	}
-
-	/***
-	 * Set the network prefix, '00' = main network, '6f' = test network.
-	 *
-	 * @param string $prefix (hexa)
-	 */
-	public function setNetworkPrefix($prefix)
-	{
-		$this->networkPrefix = $prefix;
-	}
-
-	/**
-	 * Returns the current network prefix, '00' = main network, '6f' = test network.
-	 *
-	 * @return string (hexa)
-	 */
-	public function getNetworkPrefix()
-	{
-		return $this->networkPrefix;
-	}
-
-	/**
-	 * Returns the current network prefix for WIF, '80' = main network, 'ef' = test network.
-	 *
-	 * @return string (hexa)
-	 */
-	public function getPrivatePrefix()
-	{
-		if ($this->networkPrefix == '6f')
-			return 'ef';
-		else
-			return '80';
-	}
-
-
-
-	/***
-	 * Bitcoin standard 256 bit hash function : double sha256
-	 *
-	 * @param string $data
-	 * @return string (hexa)
-	 */
-	public function hash256d($data)
-	{
-		return hash('sha256', hex2bin(hash('sha256', $data)));
-	}
-
-	/**
-	 * @param string $data
-	 * @return string (hexa)
-	 */
-	public function hash160($data)
-	{
-		return hash('ripemd160', hex2bin(hash('sha256', $data)));
-	}
-
-	/**
-	 * Generates a random 256 bytes hexadecimal encoded string that is smaller than n
-	 *
-	 * @param string $extra
-	 * @return string (hexa)
-	 * @throws \Exception
-	 */
-	public function generateRandom256BitsHexaString($extra = 'FkejkzqesrfeifH3ioio9hb55sdssdsdfOO:ss')
-	{
-		do {
-			$bytes = openssl_random_pseudo_bytes(256, $cStrong);
-			$hex = bin2hex($bytes);
-			$random = $hex . microtime(true) . $extra;
-
-			if ($cStrong === false) {
-				throw new \Exception('Your system is not able to generate strong enough random numbers');
-			}
-			$res = $this->hash256d($random);
-
-		} while (gmp_cmp(gmp_init($res, 16), gmp_sub($this->n, gmp_init(1, 10))) === 1); // make sure the generate string is smaller than n
-
-		return $res;
-	}
-
-
-
 	/***
 	 * Computes the result of a point addition and returns the resulting point as an Array.
 	 *
@@ -301,60 +156,20 @@ class BitcoinECDSA
 
 		// SLOPE = (3 * ptX^2 + a )/( 2*ptY )
 		// Equals (3 * ptX^2 + a ) * ( 2*ptY )^-1
-		$slope = gmp_mod(
-			gmp_mul(
-				gmp_invert(
-					gmp_mod(
-						gmp_mul(
-							gmp_init(2, 10),
-							$pt['y']
-						),
-						$p
-					),
-					$p
-				),
-				gmp_add(
-					gmp_mul(
-						gmp_init(3, 10),
-						gmp_pow($pt['x'], 2)
-					),
-					$a
-				)
-			),
-			$p
-		);
+		$slope = gmp_mod(gmp_mul(gmp_invert(gmp_mod(gmp_mul(gmp_init(2, 10), $pt['y']), $p), $p), gmp_add(gmp_mul(gmp_init(3, 10), gmp_pow($pt['x'], 2)), $a)), $p);
 
 		// nPtX = slope^2 - 2 * ptX
 		// Equals slope^2 - ptX - ptX
 		$nPt = [];
-		$nPt['x'] = gmp_mod(
-			gmp_sub(
-				gmp_sub(
-					gmp_pow($slope, 2),
-					$pt['x']
-				),
-				$pt['x']
-			),
-			$p
-		);
+		$nPt['x'] = gmp_mod(gmp_sub(gmp_sub(gmp_pow($slope, 2), $pt['x']), $pt['x']), $p);
 
 		// nPtY = slope * (ptX - nPtx) - ptY
-		$nPt['y'] = gmp_mod(
-			gmp_sub(
-				gmp_mul(
-					$slope,
-					gmp_sub(
-						$pt['x'],
-						$nPt['x']
-					)
-				),
-				$pt['y']
-			),
-			$p
-		);
+		$nPt['y'] = gmp_mod(gmp_sub(gmp_mul($slope, gmp_sub($pt['x'], $nPt['x'])), $pt['y']), $p);
 
 		return $nPt;
 	}
+
+
 
 	/***
 	 * Computes the result of a point addition and returns the resulting point as an Array.
@@ -379,53 +194,18 @@ class BitcoinECDSA
 
 		// SLOPE = (pt1Y - pt2Y)/( pt1X - pt2X )
 		// Equals (pt1Y - pt2Y) * ( pt1X - pt2X )^-1
-		$slope = gmp_mod(
-			gmp_mul(
-				gmp_sub(
-					$pt1['y'],
-					$pt2['y']
-				),
-				gmp_invert(
-					gmp_sub(
-						$pt1['x'],
-						$pt2['x']
-					),
-					$p
-				)
-			),
-			$p
-		);
+		$slope = gmp_mod(gmp_mul(gmp_sub($pt1['y'],$pt2['y']),gmp_invert(gmp_sub($pt1['x'],$pt2['x']),$p)),$p);
 
 		// nPtX = slope^2 - ptX1 - ptX2
 		$nPt = [];
-		$nPt['x'] = gmp_mod(
-			gmp_sub(
-				gmp_sub(
-					gmp_pow($slope, 2),
-					$pt1['x']
-				),
-				$pt2['x']
-			),
-			$p
-		);
+		$nPt['x'] = gmp_mod(gmp_sub(gmp_sub(gmp_pow($slope, 2),$pt1['x']),$pt2['x']),$p);
 
 		// nPtY = slope * (ptX1 - nPtX) - ptY1
-		$nPt['y'] = gmp_mod(
-			gmp_sub(
-				gmp_mul(
-					$slope,
-					gmp_sub(
-						$pt1['x'],
-						$nPt['x']
-					)
-				),
-				$pt1['y']
-			),
-			$p
-		);
+		$nPt['y'] = gmp_mod(gmp_sub(gmp_mul($slope,gmp_sub($pt1['x'],$nPt['x'])),$pt1['y']),$p);
 
 		return $nPt;
 	}
+
 
 	/***
 	 * Computes the result of a point multiplication and returns the resulting point as an Array.
@@ -466,16 +246,7 @@ class BitcoinECDSA
 		$p = $this->p;
 
 		$x = gmp_init($x, 16);
-		$y2 = gmp_mod(
-			gmp_add(
-				gmp_add(
-					gmp_powm($x, gmp_init(3, 10), $p),
-					gmp_mul($a, $x)
-				),
-				$b
-			),
-			$p
-		);
+		$y2 = gmp_mod(gmp_add(gmp_add(gmp_powm($x, gmp_init(3, 10), $p), gmp_mul($a, $x)), $b), $p);
 		$y = gmp_mod(gmp_pow(gmp_init($y, 16), 2), $p);
 
 		if (gmp_cmp($y2, $y) === 0)
@@ -484,13 +255,14 @@ class BitcoinECDSA
 			return false;
 	}
 
+
 	/***
 	 * returns the X and Y point coordinates of the private key.
 	 *
 	 * @return Array Point
 	 * @throws \Exception
 	 */
-	private function getPubKeyPoints(): array
+	public function getPubKeyPoints(): array
 	{
 		$G = $this->G;
 		$k = $this->k;
@@ -517,12 +289,104 @@ class BitcoinECDSA
 
 		return $pubKey;
 	}
+}
+
+//********************** */
+class BitcoinTOOL
+{
+
+	private string $networkPrefix;
+	private $ecdsa;
+
+	public function __construct()
+	{
+		$this->ecdsa = new ECDSA();
+
+		$this->networkPrefix = '00';
+	}
+
+	/***
+	 * Set the network prefix, '00' = main network, '6f' = test network.
+	 *
+	 * @param string $prefix (hexa)
+	 */
+	public function setNetworkPrefix($prefix)
+	{
+		$this->networkPrefix = $prefix;
+	}
+
+	/**
+	 * Returns the current network prefix, '00' = main network, '6f' = test network.
+	 *
+	 * @return string (hexa)
+	 */
+	public function getNetworkPrefix()
+	{
+		return $this->networkPrefix;
+	}
+
+	/**
+	 * Returns the current network prefix for WIF, '80' = main network, 'ef' = test network.
+	 *
+	 * @return string (hexa)
+	 */
+	public function getPrivatePrefix()
+	{
+		if ($this->networkPrefix == '6f')
+			return 'ef';
+		else
+			return '80';
+	}
+
+
+	/***
+	 * Bitcoin standard 256 bit hash function : double sha256
+	 *
+	 * @param string $data
+	 * @return string (hexa)
+	 */
+	public function hash256d($data)
+	{
+		return hash('sha256', hex2bin(hash('sha256', $data)));
+	}
+
+	/**
+	 * @param string $data
+	 * @return string (hexa)
+	 */
+	public function hash160($data)
+	{
+		return hash('ripemd160', hex2bin(hash('sha256', $data)));
+	}
+
+	/**
+	 * Generates a random 256 bytes hexadecimal encoded string that is smaller than n
+	 *
+	 * @param string $extra
+	 * @return string (hexa)
+	 * @throws \Exception
+	 */
+	public function generateRandom256BitsHexaString($extra = 'FkejkzqesrfeifH3ioio9hb55sdssdsdfOO:ss')
+	{
+		do {
+			$bytes = openssl_random_pseudo_bytes(256, $cStrong);
+			$hex = bin2hex($bytes);
+			$random = $hex . microtime(true) . $extra;
+
+			if ($cStrong === false) {
+				throw new \Exception('Your system is not able to generate strong enough random numbers');
+			}
+			$res = $this->hash256d($random);
+		} while (gmp_cmp(gmp_init($res, 16), gmp_sub($this->ecdsa->n, gmp_init(1, 10))) === 1); // make sure the generate string is smaller than n
+
+		return $res;
+	}
 
 	public function getPubKey(bool $compressed = false, array $pubKeyPts = []): string
 	{
 
 		if (empty($pubKeyPts))
-			$pubKeyPts = $this->getPubKeyPoints();
+			$pubKeyPts = $this->ecdsa->getPubKeyPoints();
 
 		if ($compressed == false) {
 			$uncompressedPubKey = '04' . $pubKeyPts['x'] . $pubKeyPts['y'];
@@ -550,7 +414,6 @@ class BitcoinECDSA
 			return $address;
 		else
 			throw new \Exception('the generated address seems not to be valid.');
-
 	}
 
 	public function getAddress(bool $compressed = false): string
@@ -591,30 +454,36 @@ class BitcoinECDSA
 	public function setPrivateKeyHex(string $k): void
 	{
 		//private key has to be passed as an hexadecimal number
-		if (gmp_cmp(gmp_init($k, 16), gmp_sub($this->n, gmp_init(1, 10))) === 1) {
+		if (gmp_cmp(gmp_init($k, 16), gmp_sub($this->ecdsa->n, gmp_init(1, 10))) === 1) {
 			throw new \Exception('Private Key is not in the 1,n-1 range');
 		}
-		$this->k = $k;
+		$this->ecdsa->k = $k;
 	}
 
 	public function setPrivateKeyFromSeed(string $seed): void
 	{
 		$k = hash('sha256', $seed);
-		if (gmp_cmp(gmp_init($k, 16), gmp_sub($this->n, gmp_init(1, 10))) === 1) {
+		if (gmp_cmp(gmp_init($k, 16), gmp_sub($this->ecdsa->n, gmp_init(1, 10))) === 1) {
 			throw new \Exception('Private Key is not in the 1,n-1 range');
 		}
-		$this->k = $k;
+		$this->ecdsa->k = $k;
 	}
 
 	public function getPrivateKey(): string
 	{
-		return $this->k;
+		return $this->ecdsa->k;
+	}
+
+	public function getPrivateKeyDecimal(int $divBy = null): string
+	{
+		$gmp = gmp_init($this->ecdsa->k, 16);
+		return gmp_strval($gmp, 10);
 	}
 
 
 	public function generateRandomPrivateKey(string $extra = 'FSQF5356dsdsqdfEFEQ3fq4q6dq4s5d'): void
 	{
-		$this->k = $this->generateRandom256BitsHexaString($extra);
+		$this->ecdsa->k = $this->generateRandom256BitsHexaString($extra);
 	}
 
 	public function validateAddress(string $address): bool
@@ -633,11 +502,11 @@ class BitcoinECDSA
 
 	public function getWif(bool $compressed = false): string
 	{
-		if (!isset($this->k)) {
+		if (!isset($this->ecdsa->k)) {
 			throw new \Exception('No Private Key was defined');
 		}
 
-		$k = $this->k;
+		$k = $this->ecdsa->k;
 
 		while (strlen($k) < 64)
 			$k = '0' . $k;
@@ -653,10 +522,11 @@ class BitcoinECDSA
 		return Base58::encode($secretKey);
 	}
 
-	public function getBalance(string $address=null) {
-		$addr = $address?? $this->getAddress();
+	public function getBalance(string $address = null)
+	{
+		$addr = $address ?? $this->getAddress();
 		try {
-			$balance = file_get_contents('https://blockchain.info/q/addressbalance/'.$addr);
+			$balance = file_get_contents('https://blockchain.info/q/addressbalance/' . $addr);
 			return $balance;
 		} catch (\Throwable $th) {
 			return 'Error';
@@ -684,5 +554,4 @@ class BitcoinECDSA
 
 		$this->setPrivateKeyHex(substr($key, 2, 64));
 	}
-
 }
