@@ -194,14 +194,14 @@ class ECDSA
 
 		// SLOPE = (pt1Y - pt2Y)/( pt1X - pt2X )
 		// Equals (pt1Y - pt2Y) * ( pt1X - pt2X )^-1
-		$slope = gmp_mod(gmp_mul(gmp_sub($pt1['y'],$pt2['y']),gmp_invert(gmp_sub($pt1['x'],$pt2['x']),$p)),$p);
+		$slope = gmp_mod(gmp_mul(gmp_sub($pt1['y'], $pt2['y']), gmp_invert(gmp_sub($pt1['x'], $pt2['x']), $p)), $p);
 
 		// nPtX = slope^2 - ptX1 - ptX2
 		$nPt = [];
-		$nPt['x'] = gmp_mod(gmp_sub(gmp_sub(gmp_pow($slope, 2),$pt1['x']),$pt2['x']),$p);
+		$nPt['x'] = gmp_mod(gmp_sub(gmp_sub(gmp_pow($slope, 2), $pt1['x']), $pt2['x']), $p);
 
 		// nPtY = slope * (ptX1 - nPtX) - ptY1
-		$nPt['y'] = gmp_mod(gmp_sub(gmp_mul($slope,gmp_sub($pt1['x'],$nPt['x'])),$pt1['y']),$p);
+		$nPt['y'] = gmp_mod(gmp_sub(gmp_mul($slope, gmp_sub($pt1['x'], $nPt['x'])), $pt1['y']), $p);
 
 		return $nPt;
 	}
@@ -416,7 +416,14 @@ class BitcoinTOOL
 			throw new \Exception('the generated address seems not to be valid.');
 	}
 
-	public function getAddress(bool $compressed = false): string
+	public function getAddressh160(bool $compressed = false): string
+	{
+		$address = $this->getPubKey($compressed);
+
+		$address =  $this->hash160(hex2bin($address));
+		return $address;
+	}
+	public function getAddress(bool $compressed = false, bool $verify = false): string
 	{
 		$address = $this->getPubKey($compressed);
 
@@ -425,7 +432,9 @@ class BitcoinTOOL
 		//checksum
 		$address = $address . substr($this->hash256d(hex2bin($address)), 0, 8);
 		$address = Base58::encode($address);
-
+		if ($verify == false) {
+			return $address;
+		}
 		if ($this->validateAddress($address))
 			return $address;
 		else
@@ -474,7 +483,7 @@ class BitcoinTOOL
 		return $this->ecdsa->k;
 	}
 
-	public function getPrivateKeyDecimal(int $divBy = null): string
+	public function getPrivateKeyDecimal(?int $divBy = null): string
 	{
 		$gmp = gmp_init($this->ecdsa->k, 16);
 		return gmp_strval($gmp, 10);
@@ -522,9 +531,9 @@ class BitcoinTOOL
 		return Base58::encode($secretKey);
 	}
 
-	public function getBalance(string $address = null)
+	public function getBalance(?string $address = null, bool $compressed = false)
 	{
-		$addr = $address ?? $this->getAddress();
+		$addr = $address ?? $this->getAddress($compressed);
 		try {
 			$balance = file_get_contents('https://blockchain.info/q/addressbalance/' . $addr);
 			return $balance;
