@@ -356,7 +356,8 @@ class BitcoinTOOL
 	 */
 	public function hash160($data)
 	{
-		return hash('ripemd160', hex2bin(hash('sha256', $data)));
+		$hash = hash('sha256', $data,true);
+		return hash('ripemd160', $hash);
 	}
 
 	/**
@@ -560,7 +561,7 @@ class BitcoinTOOL
 		}
 
 		$key = Base58::decode($wif, true);
-
-		$this->setPrivateKeyHex(substr($key, 2, 64));
+		$hex = substr($key, 2, 64);
+		$this->setPrivateKeyHex($hex);
 	}
 }
