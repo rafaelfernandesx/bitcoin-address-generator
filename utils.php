@@ -101,5 +101,19 @@ class BtcUtils
         else
             throw new \Exception('the generated address seems not to be valid.');
     }
+
+    static public function addressToRipemd160(string $address)
+    {
+
+        $address =  Base58::decode($address);
+        $address =  substr($address,2,40);
+
+        $len =strlen($address);
+        if ($len ==40)
+            return $address;
+        else
+            throw new \Exception('the address seems not to be valid.');
+    }
+   
 }
 BtcUtils::$btc = new BitcoinTOOL();
