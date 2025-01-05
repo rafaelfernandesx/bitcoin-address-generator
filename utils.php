@@ -114,6 +114,19 @@ class BtcUtils
         else
             throw new \Exception('the address seems not to be valid.');
     }
-   
+
+    static public function addressToRipmd160native(string $address)
+    {
+
+        $address =  base58_decode($address);
+        $address =  bin2hex(substr($address,1,20));
+
+        $len =strlen($address);
+        if ($len ==40)
+            return $address;
+        else
+        return '-----'.$address;
+            // throw new \Exception('the address seems not to be valid.');
+    }
 }
 BtcUtils::$btc = new BitcoinTOOL();
