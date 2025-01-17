@@ -137,13 +137,7 @@ class ECDSA
 			'y' => gmp_init('32670510020758816978083085130507043184471273380659243275938904335757337482424')
 		];
 	}
-	/***
-	 * Computes the result of a point addition and returns the resulting point as an Array.
-	 *
-	 * @param Array $pt
-	 * @return Array Point
-	 * @throws \Exception
-	 */
+
 	private function doublePoint(array $pt)
 	{
 		$a = $this->a;
@@ -153,32 +147,14 @@ class ECDSA
 		if ($gcd !== '1') {
 			throw new \Exception('This library doesn\'t yet supports point at infinity. See https://github.com/BitcoinPHP/BitcoinECDSA.php/issues/9');
 		}
-
-		// SLOPE = (3 * ptX^2 + a )/( 2*ptY )
-		// Equals (3 * ptX^2 + a ) * ( 2*ptY )^-1
 		$slope = gmp_mod(gmp_mul(gmp_invert(gmp_mod(gmp_mul(gmp_init(2, 10), $pt['y']), $p), $p), gmp_add(gmp_mul(gmp_init(3, 10), gmp_pow($pt['x'], 2)), $a)), $p);
-
-		// nPtX = slope^2 - 2 * ptX
-		// Equals slope^2 - ptX - ptX
 		$nPt = [];
 		$nPt['x'] = gmp_mod(gmp_sub(gmp_sub(gmp_pow($slope, 2), $pt['x']), $pt['x']), $p);
-
-		// nPtY = slope * (ptX - nPtx) - ptY
 		$nPt['y'] = gmp_mod(gmp_sub(gmp_mul($slope, gmp_sub($pt['x'], $nPt['x'])), $pt['y']), $p);
 
 		return $nPt;
 	}
 
-
-
-	/***
-	 * Computes the result of a point addition and returns the resulting point as an Array.
-	 *
-	 * @param Array $pt1
-	 * @param Array $pt2
-	 * @return Array Point
-	 * @throws \Exception
-	 */
 	private function addPoints(array $pt1, array $pt2)
 	{
 		$p = $this->p;
@@ -192,30 +168,16 @@ class ECDSA
 			throw new \Exception('This library doesn\'t yet supports point at infinity. See https://github.com/BitcoinPHP/BitcoinECDSA.php/issues/9');
 		}
 
-		// SLOPE = (pt1Y - pt2Y)/( pt1X - pt2X )
-		// Equals (pt1Y - pt2Y) * ( pt1X - pt2X )^-1
 		$slope = gmp_mod(gmp_mul(gmp_sub($pt1['y'], $pt2['y']), gmp_invert(gmp_sub($pt1['x'], $pt2['x']), $p)), $p);
 
-		// nPtX = slope^2 - ptX1 - ptX2
 		$nPt = [];
 		$nPt['x'] = gmp_mod(gmp_sub(gmp_sub(gmp_pow($slope, 2), $pt1['x']), $pt2['x']), $p);
 
-		// nPtY = slope * (ptX1 - nPtX) - ptY1
 		$nPt['y'] = gmp_mod(gmp_sub(gmp_mul($slope, gmp_sub($pt1['x'], $nPt['x'])), $pt1['y']), $p);
 
 		return $nPt;
 	}
 
-
-	/***
-	 * Computes the result of a point multiplication and returns the resulting point as an Array.
-	 *
-	 * @param string|resource $k (hexa|GMP|Other bases definded in base)
-	 * @param Array $pG
-	 * @param $base
-	 * @throws \Exception
-	 * @return Array Point
-	 */
 	private function mulPoint($k, array $pG, $base = null)
 	{
 		//in order to calculate k*G
@@ -255,13 +217,6 @@ class ECDSA
 			return false;
 	}
 
-
-	/***
-	 * returns the X and Y point coordinates of the private key.
-	 *
-	 * @return Array Point
-	 * @throws \Exception
-	 */
 	public function getPubKeyPoints(): array
 	{
 		$G = $this->G;
@@ -347,7 +302,8 @@ class BitcoinTOOL
 	 */
 	public function hash256d($data)
 	{
-		return hash('sha256', hex2bin(hash('sha256', $data)));
+		$sha256d = hash('sha256', hex2bin(hash('sha256', $data)));
+		return $sha256d;
 	}
 
 	/**
@@ -356,8 +312,8 @@ class BitcoinTOOL
 	 */
 	public function hash160($data)
 	{
-		$hash = hash('sha256', $data,true);
-		return hash('ripemd160', $hash);
+		$ripemd = hash('ripemd160', hash('sha256', $data, true));
+		return $ripemd;
 	}
 
 	/**
@@ -424,6 +380,7 @@ class BitcoinTOOL
 		$address =  $this->hash160(hex2bin($address));
 		return $address;
 	}
+
 	public function getAddress(bool $compressed = false, bool $verify = false): string
 	{
 		$address = $this->getPubKey($compressed);
