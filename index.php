@@ -1,249 +1,15 @@
 <?php
 
+require_once './ecdsa.php';
+require_once './base58.php';
+require_once './bips/bip39/bip39.php';
+
 /**
  *
  * @author Jan Moritz Lindemann
  */
 if (!extension_loaded('gmp')) {
 	throw new \Exception('GMP extension seems not to be installed');
-}
-
-class Base58
-{
-	/***
-	 * encode a hexadecimal string in Base58.
-	 *
-	 * @param string $data (hexa)
-	 * @param bool $littleEndian
-	 * @return string (base58)
-	 * @throws \Exception
-	 */
-	static public function encode($data, $littleEndian = true): string
-	{
-		$res = '';
-		$dataIntVal = gmp_init($data, 16);
-		while (gmp_cmp($dataIntVal, gmp_init(0, 10)) > 0) {
-			$qr = gmp_div_qr($dataIntVal, gmp_init(58, 10));
-			$dataIntVal = $qr[0];
-			$reminder = gmp_strval($qr[1]);
-			if (!Base58::permutation($reminder)) {
-				throw new \Exception('Something went wrong during base58 encoding');
-			}
-			$res .= Base58::permutation($reminder);
-		}
-
-		//get number of leading zeros
-		$leading = '';
-		$i = 0;
-		while (substr($data, $i, 1) === '0') {
-			if ($i !== 0 && $i % 2) {
-				$leading .= '1';
-			}
-			$i++;
-		}
-
-		if ($littleEndian)
-			return strrev($res . $leading);
-		else
-			return $res . $leading;
-	}
-
-	/***
-	 * Decode a Base58 encoded string and returns it's value as a hexadecimal string
-	 *
-	 * @param string $encodedData (base58)
-	 * @param bool $littleEndian
-	 * @return string (hexa)
-	 */
-	static public function decode($encodedData, $littleEndian = true): string
-	{
-		$res = gmp_init(0, 10);
-		$length = strlen($encodedData);
-		if ($littleEndian) {
-			$encodedData = strrev($encodedData);
-		}
-
-		for ($i = $length - 1; $i >= 0; $i--) {
-			$res = gmp_add(
-				gmp_mul(
-					$res,
-					gmp_init(58, 10)
-				),
-				Base58::permutation(substr($encodedData, $i, 1), true)
-			);
-		}
-
-		$res = gmp_strval($res, 16);
-		$i = $length - 1;
-		while (substr($encodedData, $i, 1) === '1') {
-			$res = '00' . $res;
-			$i--;
-		}
-
-		if (strlen($res) % 2 !== 0) {
-			$res = '0' . $res;
-		}
-
-		return $res;
-	}
-
-	/***
-	 * Permutation table used for Base58 encoding and decoding.
-	 *
-	 * @param string $char
-	 * @param bool $reverse
-	 * @return string|null
-	 */
-	static public function permutation($char, $reverse = false): string
-	{
-		$table = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
-
-		if ($reverse) {
-			$reversedTable = [];
-			foreach ($table as $key => $element) {
-				$reversedTable[$element] = $key;
-			}
-
-			if (isset($reversedTable[$char]))
-				return $reversedTable[$char];
-			else
-				return null;
-		}
-
-		if (isset($table[$char]))
-			return $table[$char];
-		else
-			return null;
-	}
-}
-class ECDSA
-{
-	public $k;
-	private $a;
-	private $b;
-	private $p;
-	public $n;
-	private $G;
-
-	public function __construct()
-	{
-		$this->a = gmp_init('0', 10);
-		$this->b = gmp_init('7', 10);
-		$this->p = gmp_init('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F', 16);
-		$this->n = gmp_init('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141', 16);
-
-		$this->G = [
-			'x' => gmp_init('55066263022277343669578718895168534326250603453777594175500187360389116729240'),
-			'y' => gmp_init('32670510020758816978083085130507043184471273380659243275938904335757337482424')
-		];
-	}
-
-	private function doublePoint(array $pt)
-	{
-		$a = $this->a;
-		$p = $this->p;
-
-		$gcd = gmp_strval(gmp_gcd(gmp_mod(gmp_mul(gmp_init(2, 10), $pt['y']), $p), $p));
-		if ($gcd !== '1') {
-			throw new \Exception('This library doesn\'t yet supports point at infinity. See https://github.com/BitcoinPHP/BitcoinECDSA.php/issues/9');
-		}
-		$slope = gmp_mod(gmp_mul(gmp_invert(gmp_mod(gmp_mul(gmp_init(2, 10), $pt['y']), $p), $p), gmp_add(gmp_mul(gmp_init(3, 10), gmp_pow($pt['x'], 2)), $a)), $p);
-		$nPt = [];
-		$nPt['x'] = gmp_mod(gmp_sub(gmp_sub(gmp_pow($slope, 2), $pt['x']), $pt['x']), $p);
-		$nPt['y'] = gmp_mod(gmp_sub(gmp_mul($slope, gmp_sub($pt['x'], $nPt['x'])), $pt['y']), $p);
-
-		return $nPt;
-	}
-
-	private function addPoints(array $pt1, array $pt2)
-	{
-		$p = $this->p;
-		if (gmp_cmp($pt1['x'], $pt2['x']) === 0 && gmp_cmp($pt1['y'], $pt2['y']) === 0) //if identical
-		{
-			return $this->doublePoint($pt1);
-		}
-
-		$gcd = gmp_strval(gmp_gcd(gmp_sub($pt1['x'], $pt2['x']), $p));
-		if ($gcd !== '1') {
-			throw new \Exception('This library doesn\'t yet supports point at infinity. See https://github.com/BitcoinPHP/BitcoinECDSA.php/issues/9');
-		}
-
-		$slope = gmp_mod(gmp_mul(gmp_sub($pt1['y'], $pt2['y']), gmp_invert(gmp_sub($pt1['x'], $pt2['x']), $p)), $p);
-
-		$nPt = [];
-		$nPt['x'] = gmp_mod(gmp_sub(gmp_sub(gmp_pow($slope, 2), $pt1['x']), $pt2['x']), $p);
-
-		$nPt['y'] = gmp_mod(gmp_sub(gmp_mul($slope, gmp_sub($pt1['x'], $nPt['x'])), $pt1['y']), $p);
-
-		return $nPt;
-	}
-
-	private function mulPoint($k, array $pG, $base = null)
-	{
-		//in order to calculate k*G
-		if ($base === 16 || $base === null || is_resource($base))
-			$k = gmp_init($k, 16);
-		if ($base === 10)
-			$k = gmp_init($k, 10);
-		$kBin = gmp_strval($k, 2);
-
-		$lastPoint = $pG;
-		for ($i = 1; $i < strlen($kBin); $i++) {
-			if (substr($kBin, $i, 1) === '1') {
-				$dPt = $this->doublePoint($lastPoint);
-				$lastPoint = $this->addPoints($dPt, $pG);
-			} else {
-				$lastPoint = $this->doublePoint($lastPoint);
-			}
-		}
-		if (!$this->validatePoint(gmp_strval($lastPoint['x'], 16), gmp_strval($lastPoint['y'], 16)))
-			throw new \Exception('The resulting point is not on the curve.');
-		return $lastPoint;
-	}
-
-	private function validatePoint(string $x, string $y): bool
-	{
-		$a = $this->a;
-		$b = $this->b;
-		$p = $this->p;
-
-		$x = gmp_init($x, 16);
-		$y2 = gmp_mod(gmp_add(gmp_add(gmp_powm($x, gmp_init(3, 10), $p), gmp_mul($a, $x)), $b), $p);
-		$y = gmp_mod(gmp_pow(gmp_init($y, 16), 2), $p);
-
-		if (gmp_cmp($y2, $y) === 0)
-			return true;
-		else
-			return false;
-	}
-
-	public function getPubKeyPoints(): array
-	{
-		$G = $this->G;
-		$k = $this->k;
-
-		if (!isset($this->k)) {
-			throw new \Exception('No Private Key was defined');
-		}
-
-		$pubKey = $this->mulPoint(
-			$k,
-			['x' => $G['x'], 'y' => $G['y']]
-		);
-
-		$pubKey['x'] = gmp_strval($pubKey['x'], 16);
-		$pubKey['y'] = gmp_strval($pubKey['y'], 16);
-
-		while (strlen($pubKey['x']) < 64) {
-			$pubKey['x'] = '0' . $pubKey['x'];
-		}
-
-		while (strlen($pubKey['y']) < 64) {
-			$pubKey['y'] = '0' . $pubKey['y'];
-		}
-
-		return $pubKey;
-	}
 }
 
 //********************** */
@@ -434,6 +200,31 @@ class BitcoinTOOL
 			throw new \Exception('Private Key is not in the 1,n-1 range');
 		}
 		$this->ecdsa->k = $k;
+	}
+
+	public function setPrivateKeyFromMnemonic(string $mnemonic, string $passphrase = ''): void
+	{
+		$bip39 = new BIP39();
+		$seed = $bip39->mnemonicToSeed($mnemonic, $passphrase);
+		$masterKey = $bip39->seedToMasterKey($seed);
+		$k = bin2hex($masterKey['privateKey']);
+		if (gmp_cmp(gmp_init($k, 16), gmp_sub($this->ecdsa->n, gmp_init(1, 10))) === 1) {
+			throw new \Exception('Private Key is not in the 1,n-1 range');
+		}
+		$this->ecdsa->k = $k;
+	}
+	public function setPrivateKeyFromRandomMnemonic(string $passphrase = '', string $worldLanguage = 'english'): string
+	{
+		$entropy = BIP39::generateEntropy(256);
+		$mnemonic = BIP39::entropyToMnemonic($entropy, $worldLanguage);
+		$seed = BIP39::mnemonicToSeed($mnemonic, $passphrase);
+		$masterKey = BIP39::seedToMasterKey($seed);
+		$k = bin2hex($masterKey['privateKey']);
+		if (gmp_cmp(gmp_init($k, 16), gmp_sub($this->ecdsa->n, gmp_init(1, 10))) === 1) {
+			throw new \Exception('Private Key is not in the 1,n-1 range');
+		}
+		$this->ecdsa->k = $k;
+		return $mnemonic;
 	}
 
 	public function getPrivateKey(): string
